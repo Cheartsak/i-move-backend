@@ -27,36 +27,18 @@ cloudinary.config({
 });
 
 async function uploadToCloudinary(req, res, next) {
-  // console.log("req.file", req.file);
   const fileBufferBase64 = Buffer.from(req.file.buffer).toString("base64");
   const base64File = `data:${req.file.mimetype};base64,${fileBufferBase64}`;
-  // console.log("fileBufferBase64", fileBufferBase64);
-  // console.log("base64File", base64File);
   req.cloudinary = await cloudinary.uploader.upload(base64File, {
     resource_type: "auto",
   });
-  // console.log(req.cloudinary);
   next();
 }
-
-// upload to local
-// const storage = multer.diskStorage({
-//   destination: function (req, file, cb) {
-//     cb(null, "./public/uploads");
-//   },
-//   filename: function (req, file, cb) {
-//     const name = uuidv4();
-//     const extension = file.mimetype.split("/")[1];
-//     const filename = `${name}.${extension}`;
-//     cb(null, filename);
-//   },
-// });
 
 dotenv.config();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const app = express();
-// const port = 8000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -66,27 +48,46 @@ app.use(helmet());
 
 app.get("/user/activity/:userId", auth, async (req, res) => {
   const { userId } = req.params;
-  // const data = [...mockUserActivity];
-  // const userData = data.filter((user) => user.userId === Number(userId));
-  const userData = await databaseClient
-    .db()
-    .collection("user-activity")
-    .find({ userId: new ObjectId(userId) })
-    .toArray();
-  res.json({ count: userData.length, data: userData });
+  try {
+    const userData = await databaseClient
+      .db()
+      .collection("user_card")
+      .find({ userId: new ObjectId(userId) })
+      .toArray();
+    res.status(200).json({ count: userData.length, data: userData });
+  } catch (error) {
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.get("/user/info/:userId", auth, async (req, res) => {
   const { userId } = req.params;
-  // const data = [...mockUserInfo];
-  // const userData = data.filter((user) => user.userId === Number(userId));
-  const userData = await databaseClient
-    .db()
-    .collection("user-info")
-    .find({ _id: new ObjectId(userId) })
-    .project({ password: 0 })
-    .toArray();
-  res.json({ data: userData });
+  try {
+    const userData = await databaseClient
+      .db()
+      .collection("members")
+      .find({ _id: new ObjectId(userId) })
+      .project({ password: 0 })
+      .toArray();
+    res.status(200).json({ data: userData });
+  } catch (error) {
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.get("/user/info/email/:email", auth, async (req, res) => {
+  const { email } = req.params;
+  try {
+    const userData = await databaseClient
+      .db()
+      .collection("members")
+      .find({ email: email })
+      .project({ password: 0 })
+      .toArray();
+    res.status(200).json({ data: userData });
+  } catch (error) {
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.post("/user/changePassword/:userId", auth, async (req, res) => {
@@ -94,17 +95,18 @@ app.post("/user/changePassword/:userId", auth, async (req, res) => {
   const { newPassword } = req.body;
   const saltRounds = 12;
   const hashedPassword = bcrypt.hashSync(newPassword, saltRounds);
-  // const data = [...mockUserInfo];
-  // const userData = data.filter((user) => user.userId === Number(userId))[0];
-  // userData.password = hashedPassword;
-  await databaseClient
-    .db()
-    .collection("user-info")
-    .updateOne(
-      { _id: new ObjectId(userId) },
-      { $set: { password: hashedPassword } }
-    );
-  res.status(200).send("OK");
+  try {
+    await databaseClient
+      .db()
+      .collection("members")
+      .updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { password: hashedPassword } }
+      );
+    res.status(200).send("OK");
+  } catch (error) {
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 app.patch(
@@ -115,44 +117,27 @@ app.patch(
   async (req, res) => {
     const { userId } = req.params;
     const { name, email, phoneNumber } = req.body;
-    // const { filename } = req.file;
-    // const data = [...mockUserInfo];
-    // const userData = data.filter((user) => user.userId === Number(userId))[0];
-    // userData.fullName = name;
-    // userData.email = email;
-    // userData.phone = phoneNumber;
-    // userData.imagePath = `/uploads/${filename}`;
-    await databaseClient
-      .db()
-      .collection("user-info")
-      .updateOne(
-        { _id: new ObjectId(userId) },
-        {
-          $set: {
-            fullName: name,
-            email: email,
-            phone: phoneNumber,
-            imagePath: req.cloudinary.secure_url,
-          },
-        }
-      );
-    res.send("OK");
+    try {
+      await databaseClient
+        .db()
+        .collection("members")
+        .updateOne(
+          { _id: new ObjectId(userId) },
+          {
+            $set: {
+              fullName: name,
+              email: email,
+              phoneNumber: phoneNumber,
+              imagePath: req.cloudinary.secure_url,
+            },
+          }
+        );
+      res.status(200).send("OK");
+    } catch (error) {
+      res.status(500).send("Internal Server Error");
+    }
   }
 );
-
-// mock upload
-// app.patch("/user/:userId/uploads", upload.single("image"), (req, res) => {
-//   const { filename } = req.file;
-//   const { name } = req.body;
-//   console.log(req.file);
-//   const todoId = parseInt(req.params.userId, 10);
-//   const updatedTodo = updateTodo(todoId, { imagePath: `/uploads/${filename}` });
-//   if (!updatedTodo) {
-//     res.status(404).json({ error: { message: "todo not found" } });
-//   }
-
-//   res.json({ data: [{ id: todoId, imagePath: `/uploads/${filename}`, name }] });
-// });
 
 // mock login
 app.post("/mock/login", async (req, res) => {
@@ -163,7 +148,6 @@ app.post("/mock/login", async (req, res) => {
     .findOne({ email: email });
 
   // Fetch user from database
-
   if (!user) {
     return res
       .status(400)
@@ -201,11 +185,11 @@ app.get("/post/", async (req, res) => {
             from: "members",
             localField: "userId",
             foreignField: "_id",
-            as: "userDetails"
-          }
+            as: "userDetails",
+          },
         },
         {
-          $unwind: "$userDetails"
+          $unwind: "$userDetails",
         },
         {
           $project: {
@@ -220,12 +204,12 @@ app.get("/post/", async (req, res) => {
             imageUrl: 1,
             createdAt: 1,
             "userDetails.fullName": 1,
-            "userDetails.imagePath": 1
-          }
+            "userDetails.imagePath": 1,
+          },
         },
         {
-          $sort: { createdAt: -1 }
-        }
+          $sort: { createdAt: -1 },
+        },
       ])
       .toArray();
     res.status(200).json(data);
@@ -297,7 +281,15 @@ app.get("/post/:userId/", async (req, res) => {
 //edit card
 app.put("/edit/post/:cardId", upload.single("imageUrl"), async (req, res) => {
   const { cardId } = req.params;
-  const {  activityName, activityType, date, durations, distance, description, oldImageUrl } = req.body;
+  const {
+    activityName,
+    activityType,
+    date,
+    durations,
+    distance,
+    description,
+    oldImageUrl,
+  } = req.body;
 
   try {
     let imageUrlToUpdate;
@@ -326,7 +318,7 @@ app.put("/edit/post/:cardId", upload.single("imageUrl"), async (req, res) => {
             distance: distance,
             description: description,
             imageUrl: imageUrlToUpdate,
-          }
+          },
         }
       );
 
@@ -342,46 +334,58 @@ app.put("/edit/post/:cardId", upload.single("imageUrl"), async (req, res) => {
   }
 });
 
-
 //create a new card
-app.post("/post/", upload.single("imageUrl"),uploadToCloudinary,  async (req, res) => {
-  try {
-    const { userId,  activityName, activityType, date, durations, distance, description } = req.body;
-    // Get the current timestamp
-    const createdAt = new Date();
-    // Insert the new record into the database collection and capture the result
-    const insertResult = await databaseClient
-      .db()
-      .collection("user_card")
-      .insertOne({
-        userId: new ObjectId(userId),
-        activityName: activityName,
-        activityType: activityType,
-        date: date,
-        durations: durations,
-        distance: distance,
-        description: description,
-        imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
-        createdAt: createdAt, // Add the createdAt field
-      });
+app.post(
+  "/post/",
+  upload.single("imageUrl"),
+  uploadToCloudinary,
+  async (req, res) => {
+    try {
+      const {
+        userId,
+        activityName,
+        activityType,
+        date,
+        durations,
+        distance,
+        description,
+      } = req.body;
+      // Get the current timestamp
+      const createdAt = new Date();
+      // Insert the new record into the database collection and capture the result
+      const insertResult = await databaseClient
+        .db()
+        .collection("user_card")
+        .insertOne({
+          userId: new ObjectId(userId),
+          activityName: activityName,
+          activityType: activityType,
+          date: date,
+          durations: durations,
+          distance: distance,
+          description: description,
+          imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
+          createdAt: createdAt, // Add the createdAt field
+        });
 
-    // Check if the insertion was successful
-    if (insertResult.acknowledged === true) {
-      res.status(201).send({ insertedId: insertResult.insertedId });
-    } else {
-      res.status(500).json({ error: "Failed to insert record into the database" });
-    }    
-    
-  } catch (error) {
-    console.error("Error creating new record:", error);
-    res.status(500).send("Internal Server Error");
+      // Check if the insertion was successful
+      if (insertResult.acknowledged === true) {
+        res.status(201).send({ insertedId: insertResult.insertedId });
+      } else {
+        res
+          .status(500)
+          .json({ error: "Failed to insert record into the database" });
+      }
+    } catch (error) {
+      console.error("Error creating new record:", error);
+      res.status(500).send("Internal Server Error");
+    }
   }
-});
-
+);
 
 //delete card
-app.delete("/delete/post/:cardId", async (req, res) =>{
-  const {cardId} = req.params;
+app.delete("/delete/post/:cardId", async (req, res) => {
+  const { cardId } = req.params;
   try {
     // Find and delete the user document
     const result = await databaseClient
@@ -389,9 +393,9 @@ app.delete("/delete/post/:cardId", async (req, res) =>{
       .db()
       .collection("user_card")
       .findOneAndDelete({ _id: new ObjectId(cardId) });
-       // Check if any document was deleted
-       console.log(result);
-      
+    // Check if any document was deleted
+    console.log(result);
+
     if (result) {
       res.status(200).json({ message: "User data deleted successfully" });
     } else {
@@ -415,7 +419,7 @@ app.get("/user/data/:email", async (req, res) => {
         { $match: { email: email } },
         {
           $project: {
-            userId: { $toString: "$_id" }, 
+            userId: { $toString: "$_id" },
             dob: 1,
             email: 1,
             fullName: 1,
@@ -424,16 +428,15 @@ app.get("/user/data/:email", async (req, res) => {
             phoneNumber: 1,
             typemem: 1,
             imagePath: 1,
-          }
-        }
+          },
+        },
       ])
       .toArray();
     if (data.length > 0) {
       res.status(200).json(data);
     } else {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: "User not found" });
     }
-
   } catch (err) {
     res.status(500).json(err);
   }
@@ -441,7 +444,7 @@ app.get("/user/data/:email", async (req, res) => {
 
 app.post("/signup", signupRoute);
 
-app.post("/login" ,  loginRoute);
+app.post("/login", loginRoute);
 
 app.post("/data" , getdata);
 
@@ -449,12 +452,9 @@ app.get("/api", getemailRoute);
 
 app.post("/updatepassword", changpassword)
 
-app.get("/", (req, res) => {res.send("Hi")});
-
-
-
-
-
+app.get("/", (req, res) => {
+  res.send("Hi");
+});
 
 // app.listen(PORT, () => {
 //   console.log(`Example app listening on port ${PORT}`);
