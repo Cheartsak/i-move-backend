@@ -3,7 +3,7 @@ import { checkMissingField } from "../utils/requestUtils.js"; // Import the chec
 import databaseClient from "../services/database.mjs"; // Import the databaseClient
 
 const changpassword = async (req, res) => {
-  const DATA_KEY_password = ["dob", "password", "email"];
+  const DATA_KEY_password = ["password", "email"];
   let body = req.body;
 
   const [isBodyChecked, setISsChecked] = checkMissingField(
@@ -18,7 +18,7 @@ const changpassword = async (req, res) => {
 
   const SALT = 10;
   const saltRound = await bcrypt.genSalt(SALT);
-  body["password"] = await bcrypt.hash(body["password"], saltRound);
+  const hashpassword = await bcrypt.hash(body.password, saltRound);
 
   const email = body.email;
   await databaseClient
@@ -26,14 +26,14 @@ const changpassword = async (req, res) => {
     .collection("members")
     .updateOne(
       {
-        email: { email },
+        email: email ,
       },
       {
-        $set: { password: body },
+        $set: { password: hashpassword },
       }
     );
 
-  res.status(200).json(body);
+  res.status(200).json("Change Password Success");
 };
 
 export default changpassword;
