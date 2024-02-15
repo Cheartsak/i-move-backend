@@ -18,11 +18,11 @@ const getemailRoute = async (req, res) => {
     .findOne({ email: body.email }, { projection: { password: 0 } });
 
   if (!user) {
-    res.status(400).send("Invalid Email");
+    res.status(304).send("Invalid Email");
     console.log("Invalid Email");
   } else {
-    res.status(200).send("Match Email");
-    console.log("Match Email");
+    res.status(200).send(user);
+    console.log(user);
   }
 };
 

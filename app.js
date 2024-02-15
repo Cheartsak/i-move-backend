@@ -17,7 +17,7 @@ import getemailRoute from "./module/getemail.js";
 import changpassword from "./module/updatepassword.js";
 
 
-const HOSTNAME = process.env.SERVER_IP || "localhost";
+// const HOSTNAME = process.env.SERVER_IP || "localhost";
 const PORT = process.env.SERVER_PORT || 8000;
 
 cloudinary.config({
@@ -446,11 +446,11 @@ app.get("/", (req, res) => {
 // });
 
 // initilize web server
-const currentServer = app.listen(PORT, HOSTNAME, () => {
+const currentServer = app.listen(PORT, () => {
   console.log(
     `DATABASE IS CONNECTED: NAME => ${databaseClient.db().databaseName}`
   );
-  console.log(`SERVER IS ONLINE => http://${HOSTNAME}:${PORT}`);
+  // console.log(`SERVER IS ONLINE => http://${HOSTNAME}:${PORT}`);
 });
 
 const cleanup = () => {
