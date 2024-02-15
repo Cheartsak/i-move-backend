@@ -21,8 +21,8 @@ const getemailRoute = async (req, res) => {
     res.status(400).send("Invalid Email");
     console.log("Invalid Email");
   } else {
-    res.status(200).send("Match Email");
-    console.log("Match Email");
+    res.status(200).send(user);
+    console.log(user);
   }
 };
 
