@@ -340,7 +340,7 @@ app.post(
   upload.single("imageUrl"),
   uploadToCloudinary,
   async (req, res) => {
-    try {
+        try {
       const {
         userId,
         activityName,
@@ -408,31 +408,15 @@ app.delete("/delete/post/:cardId", async (req, res) => {
 });
 
 //get user data using E-mail
-app.get("/user/data/:email", async (req, res) => {
-  const { email } = req.params;
+app.get("/user/data/:userId", async (req, res) => {
+  const { userId } = req.params;
 
   try {
     const data = await databaseClient
       .db()
       .collection("members")
-      .aggregate([
-        { $match: { email: email } },
-        {
-          $project: {
-            userId: { $toString: "$_id" },
-            dob: 1,
-            email: 1,
-            fullName: 1,
-            gender: 1,
-            password: 1,
-            phoneNumber: 1,
-            typemem: 1,
-            imagePath: 1,
-          },
-        },
-      ])
-      .toArray();
-    if (data.length > 0) {
+      .findOne({ _id: new ObjectId(userId)});
+    if (data) {
       res.status(200).json(data);
     } else {
       res.status(404).json({ message: "User not found" });
@@ -441,6 +425,7 @@ app.get("/user/data/:email", async (req, res) => {
     res.status(500).json(err);
   }
 });
+
 
 app.post("/signup", signupRoute);
 
